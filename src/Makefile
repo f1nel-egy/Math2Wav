@@ -53,4 +53,4 @@ run:
 
 clean:
 	rm -rf $(BUILD_DIR_REALPATH)/*
-	mkdir $(BUILD_DIR_REALPATH)/objs
+	mkdir -p $(BUILD_DIR_REALPATH)/objs
