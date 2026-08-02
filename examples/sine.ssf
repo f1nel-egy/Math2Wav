@@ -1,0 +1,6 @@
+samplerate = 48000
+duration   = 1000
+width      = 32
+format     = wav
+
+f(x) = 0.25 * sin(2 * pi() * 440 * x)

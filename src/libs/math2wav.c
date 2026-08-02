@@ -105,10 +105,54 @@ double dclampddd(double value, double min, double max){
     return value;
 }
 
-long double ldclampldldld(long double value, long double min, long double max){ 
+long double ldclampldldld(long double value, long double min, long double max){
     if(value > max)
         value = max;
     else if(value < min)
         value = min;
     return value;
+}
+
+double m2w_fmod(double a, double b){
+    return fmod(a, b);
+}
+
+double m2w_min(double a, double b){
+    return a < b ? a : b;
+}
+
+double m2w_max(double a, double b){
+    return a > b ? a : b;
+}
+
+double m2w_clamp(double value, double low, double high){
+    if(value < low)
+        return low;
+    if(value > high)
+        return high;
+    return value;
+}
+
+double m2w_sign(double a){
+    return (a > 0.0) - (a < 0.0);
+}
+
+double m2w_saw(double phase){
+    double t = phase - floor(phase);
+    return 2.0 * t - 1.0;
+}
+
+double m2w_tri(double phase){
+    double t = phase - floor(phase);
+    return 4.0 * fabs(t - 0.5) - 1.0;
+}
+
+double m2w_sqr(double phase){
+    double t = phase - floor(phase);
+    return t < 0.5 ? 1.0 : -1.0;
+}
+
+double m2w_noise(double seed){
+    double value = sin(seed * 12.9898) * 43758.5453;
+    return 2.0 * (value - floor(value)) - 1.0;
 }

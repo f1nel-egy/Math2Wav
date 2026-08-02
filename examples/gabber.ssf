@@ -1,0 +1,63 @@
+import "lib/time.ssf"
+import "lib/notes.ssf"
+import "lib/env.ssf"
+import "lib/fx.ssf"
+
+samplerate = 48000
+duration   = 8000
+width      = 32
+format     = wav
+
+const TAU = 2 * pi()
+const BPM = 180
+
+const KROOT  = Gs1
+const KPUNCH = 6
+const KRATE  = 55
+const KDRIVE = 9
+const KDECAY = 9
+const KRES    = C4
+const KRESQ   = 12
+const KRESAMT = 0.55
+const MASTER = 1.0
+
+
+fn kbody(t) = sin(TAU * (KROOT * t + KPUNCH * (1 - exp(-t * KRATE))))
+
+fn kick(t) = hardclip(kbody(t) * decay(t, KDECAY), KDRIVE)
+
+fn kres(t) = sin(TAU * KRES * t) * decay(t, KRESQ)
+
+fn eq(a, b) = 1 - sign(abs(a - b))
+
+fn is_double(x) = eq(step(x, BPM, 4), 3) * eq(fmod(bar_index(x, BPM), 2), 1)
+
+fn kper(x)       = beat(BPM) / (1 + is_double(x))
+fn kick_voice(x) = kick(fmod(x, kper(x))) + KRESAMT * kres(fmod(x, kper(x)))
+
+
+fn seqfreq(s) =
+      A3 * eq(s, 0)
+    + A4 * eq(s, 1)
+    + C4 * eq(s, 2)
+    + G4 * eq(s, 3)
+
+fn hoover(freq, t) =
+    0.2 * tilt(freq, A3, 3) * ( saw(freq * t)
+          + saw(1.01 * freq * t)
+          + saw(0.99 * freq * t)
+          + 0.6 * saw(2 * freq * t)
+          + sqr(0.5 * freq * t) )
+
+fn stab(x) = softclip(
+        hoover(seqfreq(step(x, BPM, 4)), beat_phase(x + beat(BPM) / 2, BPM))
+      * decay(beat_phase(x + beat(BPM) / 2, BPM), 9)
+    , 1.3)
+
+fn hats(x) = noise(x * 78233) * decay(div_phase(x, BPM, 8), 180)
+
+f(x) = hardclip(MASTER * (
+      0.55 * kick_voice(x)
+    + 0.90 * stab(x)
+    + 0.60 * hats(x)
+), 1)

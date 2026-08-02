@@ -45,6 +45,16 @@
 void convert_string_lower(char *string);
 void big_endian_to_little(void *big_endian_value, uint32_t size_bytes);
 
+double m2w_fmod(double a, double b);
+double m2w_min(double a, double b);
+double m2w_max(double a, double b);
+double m2w_clamp(double value, double low, double high);
+double m2w_sign(double a);
+double m2w_saw(double phase);
+double m2w_tri(double phase);
+double m2w_sqr(double phase);
+double m2w_noise(double seed);
+
 uint64_t u64clampu64u64u64(uint64_t value, uint64_t min, uint64_t max);
 uint32_t u32clampu32u32u32(uint32_t value, uint32_t min, uint32_t max);
 uint16_t u16clampu16u16u16(uint16_t value, uint16_t min, uint16_t max);

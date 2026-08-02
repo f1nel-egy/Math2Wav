@@ -1,0 +1,7 @@
+const TAU = 2 * pi()
+
+fn sine(freq, t) = sin(TAU * freq * t)
+
+fn decay(t, k) = exp(-t * k)
+
+fn pluck(freq, t, period, k) = sine(freq, t) * decay(t % period, k)

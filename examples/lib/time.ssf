@@ -1,0 +1,22 @@
+# time.ssf - BPM / beat timing helpers. Everything takes bpm so the file is
+# self-contained; x is always the time in seconds.
+#
+#   d = note division: 1=whole, 2=half, 4=quarter, 8=eighth, 16=sixteenth ...
+
+fn beat(bpm)      = 60 / bpm
+fn bar(bpm)       = 4 * beat(bpm)
+fn note_len(bpm, d) = bar(bpm) / d
+
+# Phase = time since the current period started (for retriggering a voice).
+fn phase(x, period)   = fmod(x, period)
+fn beat_phase(x, bpm) = fmod(x, beat(bpm))
+fn bar_phase(x, bpm)  = fmod(x, bar(bpm))
+fn div_phase(x, bpm, d) = fmod(x, note_len(bpm, d))
+
+# Integer indices / step counters.
+fn beat_index(x, bpm) = floor(x / beat(bpm))
+fn bar_index(x, bpm)  = floor(x / bar(bpm))
+fn step(x, bpm, d)    = floor(bar_phase(x, bpm) / note_len(bpm, d))
+
+# 1 during the first `frac` (0..1) of each division, else 0 - a simple gate.
+fn gate(x, bpm, d, frac) = 0.5 * (1 - sign(div_phase(x, bpm, d) - frac * note_len(bpm, d)))

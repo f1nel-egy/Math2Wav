@@ -44,8 +44,6 @@ build: $(SUBDIRS)
 	$(CC) $(CFLAGS) -c main.c -o $(OBJS_DIR_REALPATH)/main.o
 	echo "  LD      $(BUILD_DIR_REALPATH)/math2wav"
 	$(LD) $(LDFLAGS) $(OBJS_DIR_REALPATH)/*.o -o $(BUILD_DIR_REALPATH)/math2wav
-	echo "  LD      $(BUILD_DIR_REALPATH)/libmath2wav.so"
-	$(LD) $(LDFLAGS) -shared $(OBJS_DIR_REALPATH)/*.o -o $(BUILD_DIR_REALPATH)/libmath2wav.so
 	echo "Math2Wav at: $(BUILD_DIR_REALPATH)/math2wav is ready"
 
 run:
@@ -53,4 +51,4 @@ run:
 
 clean:
 	rm -rf $(BUILD_DIR_REALPATH)/*
-	mkdir -p $(BUILD_DIR_REALPATH)/objs
+	mkdir $(BUILD_DIR_REALPATH)/objs

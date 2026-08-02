@@ -1,0 +1,22 @@
+
+fn gain(y, g)   = y * g
+fn db(d)        = 10 ^ (d / 20) 
+fn gaindb(y, d) = y * db(d)
+fn mix(a, b, m) = a * (1 - m) + b * m  
+fn dcblock(y, b) = y - b 
+
+
+fn hardclip(y, drive)  = clamp(y * drive, -1, 1)
+fn softclip(y, drive)  = tanh(y * drive)                 
+fn overdrive(y, drive) = tanh(y * drive) / tanh(drive)   
+fn rectify(y)          = abs(y)                          
+fn fold(y, drive)      = tri(0.25 * y * drive)          
+fn crush(y, steps)     = floor(y * steps) / steps       
+fn shape(y, k)         = (1 + k) * y / (1 + k * abs(y)) 
+
+fn tilt(freq, ref, slope) = 10 ^ (slope * (ln(freq / ref) / ln(2)) / 20)
+
+fn lowpass(freq, cutoff)  = 1 / sqrt(1 + (freq / cutoff) ^ 2)
+fn highpass(freq, cutoff) = (freq / cutoff) / sqrt(1 + (freq / cutoff) ^ 2)
+
+fn peak(freq, center, bw) = 1 / (1 + ((freq - center) / bw) ^ 2)

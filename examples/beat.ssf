@@ -1,0 +1,6 @@
+samplerate = 48000
+duration   = 4000
+width      = 32
+format     = wav
+
+f(x) = sin(2*pi() * (45 * (x % 0.5) + 4 * (1 - exp(-(x % 0.5) * 35)))) * exp(-(x % 0.5) * 10) * 0.6 + sin(2*pi() * 55 * x) * exp(-(x % 0.25) * 12) * 0.3 + noise(x) * exp(-((x + 0.25) % 0.5) * 45) * 0.1
