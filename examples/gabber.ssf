@@ -9,8 +9,7 @@ width      = 32
 format     = wav
 
 const TAU = 2 * pi()
-const BPM = 180
-
+const BPM = 200
 const KROOT  = Gs1
 const KPUNCH = 6
 const KRATE  = 55

@@ -1,0 +1,124 @@
+# an actual track in ssf :O
+
+import "lib/time.ssf"
+import "lib/notes.ssf"
+import "lib/env.ssf"
+import "lib/fx.ssf"
+
+samplerate = 48000
+duration   = 136000
+width      = 32
+format     = wav
+
+const TAU    = 2 * pi()
+const BPM    = 128
+const MASTER = 0.92
+
+const KR     = 48
+const KPUNCH = 5
+const KRATE  = 45
+const KDECAY = 7
+const KDRIVE = 1.6
+
+const SCD    = 0.78
+const SCK    = 9
+
+# helpers
+fn eq(a, b)   = 1 - sign(abs(a - b))
+fn bp(x)      = beat_phase(x, BPM)
+fn dph(x, d)  = div_phase(x, BPM, d)
+fn nlen(d)    = note_len(BPM, d)
+fn barn(x)    = bar_index(x, BPM)
+fn fbar(x)    = x / bar(BPM)
+fn pick4(i, a, b, c, d) = a*eq(i,0) + b*eq(i,1) + c*eq(i,2) + d*eq(i,3)
+
+# harmony
+fn progi(x)   = fmod(barn(x), 4)
+fn ch_root(x) = pick4(progi(x), A1, F1, C2, G1)
+fn ch1(x)     = pick4(progi(x), A3, F3, C4, G3)
+fn ch2(x)     = pick4(progi(x), C4, A3, E4, B3)
+fn ch3(x)     = pick4(progi(x), E4, C4, G4, D4)
+
+# section gates
+fn ge(v, t)     = (1 + sign(v - t + 0.5)) / 2
+fn inr(x, a, b) = ge(barn(x), a) * (1 - ge(barn(x), b))
+
+# kick
+fn kbody(t) = sin(TAU * (KR * t + KPUNCH * (1 - exp(-t * KRATE))))
+fn kick(x)  = hardclip(kbody(bp(x)) * decay(bp(x), KDECAY), KDRIVE)
+
+# bass
+fn bass_osc(f, p) = 0.82 * sin(TAU * f * p) + 0.18 * saw(f * p)
+fn bass(x)        = bass_osc(ch_root(x), dph(x, 8)) * ad(dph(x, 8), 0.004, nlen(8) * 0.92)
+
+# pad
+fn pad_voice(f, x) = tilt(f, C4, -3) *
+                     ( 0.5 * saw(f * x)
+                     + 0.5 * saw(1.004 * f * x)
+                     + 0.3 * tri(0.5 * f * x) )
+fn pad(x) = ( pad_voice(ch1(x), x) + pad_voice(ch2(x), x) + pad_voice(ch3(x), x) )
+          * ( 0.6 + 0.4 * lfo_uni(x, 0.125) )
+
+# arp
+fn arp_step(x) = step(x, BPM, 16)
+fn arp_ti(x)   = fmod(arp_step(x), 3)
+fn arp_oct(x)  = floor(fmod(arp_step(x), 6) / 3)
+fn arp_note(x) = ( ch1(x) * eq(arp_ti(x), 0)
+                 + ch2(x) * eq(arp_ti(x), 1)
+                 + ch3(x) * eq(arp_ti(x), 2) ) * (1 + arp_oct(x))
+fn arp(x) = ( saw(arp_note(x) * dph(x, 16)) + 0.4 * sqr(arp_note(x) * dph(x, 16)) )
+          * ad(dph(x, 16), 0.002, nlen(16) * 0.8)
+          * tilt(arp_note(x), C4, -1)
+
+# lead
+fn mel_step(x) = floor(fmod(x, 2 * bar(BPM)) / nlen(8))
+fn mel_note(x) =
+      E4*eq(mel_step(x),0)  + E4*eq(mel_step(x),1)  + G4*eq(mel_step(x),2)  + A4*eq(mel_step(x),3)
+    + G4*eq(mel_step(x),4)  + E4*eq(mel_step(x),5)  + D4*eq(mel_step(x),6)  + C4*eq(mel_step(x),7)
+    + D4*eq(mel_step(x),8)  + D4*eq(mel_step(x),9)  + E4*eq(mel_step(x),10) + G4*eq(mel_step(x),11)
+    + A4*eq(mel_step(x),12) + G4*eq(mel_step(x),13) + E4*eq(mel_step(x),14)
+fn lead(x) = sign(abs(mel_note(x)))
+           * ( saw(mel_note(x) * dph(x, 8)) + 0.5 * sqr(0.5 * mel_note(x) * dph(x, 8)) )
+           * ad(dph(x, 8), 0.005, nlen(8) * 0.85)
+           * tilt(max(mel_note(x), 1), C4, -1)
+
+# percussion
+fn clap_gate(x) = eq(fmod(beat_index(x, BPM), 2), 1)
+fn clap(x)      = clap_gate(x) *
+                  ( noise(x * 11317) * decay(bp(x), 24)
+                  + 0.3 * sin(TAU * 180 * bp(x)) * decay(bp(x), 30) )
+fn hats(x) = noise(x * 57121) * decay(dph(x, 16), 130)
+           * ( 0.5 + 0.5 * eq(fmod(step(x, BPM, 16), 2), 1) )
+
+# riser
+fn rwin(x, a, b) = clamp((fbar(x) - a) / (b - a), 0, 1) * inr(x, a, b)
+fn rsum(x)       = rwin(x, 14, 16) + rwin(x, 46, 48)
+fn riser(x) = ( 0.7 * noise(x * 99551)
+              + 0.3 * sin(TAU * (400 + 2200 * rsum(x)) * x) ) * rsum(x)
+
+# arrangement
+fn g_kick(x) = clamp( inr(x,16,32) + inr(x,48,64) + inr(x,40,48), 0, 1)
+fn g_bass(x) = inr(x,16,32) + inr(x,48,64) + 0.6*inr(x,40,48)
+fn g_pad(x)  = 0.50*inr(x,0,8)  + 0.70*inr(x,8,16)  + 0.55*inr(x,16,32) + 0.90*inr(x,32,40)
+             + 0.70*inr(x,40,48) + 0.55*inr(x,48,64) + 0.60*inr(x,64,72)
+fn g_arp(x)  = 0.50*inr(x,8,16) + 0.80*inr(x,16,32) + 0.35*inr(x,32,40)
+             + 0.60*inr(x,40,48) + 0.80*inr(x,48,64)
+fn g_lead(x) = inr(x,16,32) + inr(x,48,64) + 0.8*inr(x,32,40)
+fn g_clap(x) = inr(x,16,32) + inr(x,48,64)
+fn g_hats(x) = 0.4*inr(x,8,16) + inr(x,16,32) + 0.7*inr(x,40,48) + inr(x,48,64)
+
+# sidechain
+fn pump(x) = SCD * exp(-bp(x) * SCK) * clamp(g_kick(x), 0, 1)
+fn sc(x)   = 1 - pump(x)
+
+# mix
+f(x) = softclip(
+      0.95 * g_kick(x) * kick(x)
+    + 0.70 * g_bass(x) * bass(x) * sc(x)
+    + 0.26 * g_pad(x)  * pad(x)  * sc(x)
+    + 0.42 * g_arp(x)  * arp(x)  * sc(x)
+    + 0.52 * g_lead(x) * lead(x) * sc(x)
+    + 0.60 * g_clap(x) * clap(x)
+    + 0.32 * g_hats(x) * hats(x)
+    + 0.45 * riser(x)
+  , 1.05) * MASTER
