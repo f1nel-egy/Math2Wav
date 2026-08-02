@@ -1,6 +1,6 @@
 #include "ssf.h"
 #include "math2wav.h"
-#include "tinyexpr.h"
+#include "../thirdparty/tinyexpr.h"
 
 #include <ctype.h>
 #include <stdio.h>

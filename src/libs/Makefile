@@ -1,10 +1,6 @@
-.PHONY: tinyexpr_build math2wav_build ssf_build
+.PHONY: math2wav_build ssf_build
 
-build: tinyexpr_build math2wav_build ssf_build
-
-tinyexpr_build:
-	echo "  CC      $(BUILD_DIR)/tinyexpr.o"
-	$(CC) $(CFLAGS) -c tinyexpr.c -o $(BUILD_DIR)/tinyexpr.o
+build: math2wav_build ssf_build
 
 math2wav_build:
 	echo "  CC      $(BUILD_DIR)/math2wav.o"

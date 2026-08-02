@@ -1,0 +1,102 @@
+import "lib/time.ssf"
+import "lib/notes.ssf"
+import "lib/env.ssf"
+import "lib/fx.ssf"
+
+samplerate = 48000
+duration   = 7742
+width      = 32
+format     = wav
+
+const TAU    = 2 * pi()
+const BPM    = 124
+const MASTER = 0.95
+
+const KROOT  = 50
+const KPUNCH = 6
+const KRATE  = 48
+const KDECAY = 8
+const KDRIVE = 1.5
+
+const SW  = 0.58
+const P8  = note_len(BPM, 8)
+const SWB = SW * P8
+
+# helpers
+fn eq(a, b) = 1 - sign(abs(a - b))
+fn gt0(a)   = (1 + sign(a)) / 2
+fn bp(x)    = beat_phase(x, BPM)
+
+# swung grid
+fn sw_pos(x)   = fmod(x, P8)
+fn sw_off(x)   = gt0(sw_pos(x) - SWB)
+fn sw_phase(x) = sw_pos(x) - SWB * sw_off(x)
+fn sw_step(x)  = 2 * step(x, BPM, 8) + sw_off(x)
+
+# second bar of the loop
+fn is_b2(x) = eq(fmod(bar_index(x, BPM), 2), 1)
+
+# velocity
+fn rnd(s)    = 0.5 + 0.5 * noise(s)
+fn accent(x) = 0.55 + 0.45 * rnd(sw_step(x) + 23 * is_b2(x))
+
+# kick
+fn kbody(t)  = sin(TAU * (KROOT * t + KPUNCH * (1 - exp(-t * KRATE))))
+fn kvoice(t) = hardclip(kbody(t) * decay(t, KDECAY), KDRIVE)
+fn k_base(x) = eq(fmod(step(x, BPM, 8), 2), 0)
+fn k_push(x) = is_b2(x) * eq(step(x, BPM, 8), 7)
+fn k_hit(x)  = clamp(k_base(x) + k_push(x), 0, 1)
+fn kick(x)   = k_hit(x) * kvoice(div_phase(x, BPM, 8))
+
+# clap
+fn clap_gate(x) = eq(fmod(beat_index(x, BPM), 2), 1)
+fn clap_burst(t) = noise(t * 20143) *
+                   ( decay(t, 42)
+                   + 0.8 * decay(max(t - 0.010, 0), 42)
+                   + 0.6 * decay(max(t - 0.020, 0), 42) )
+fn clap(x) = clap_gate(x) * clap_burst(bp(x)) * 0.9
+
+# snare with doubles and ghosts
+fn snr_voice(t) = (0.85 * noise(t * 4441) + 0.30 * sin(TAU * 190 * t)) * decay(t, 55)
+fn snr_dbl_gate(x) = is_b2(x) * (eq(sw_step(x), 5) + eq(sw_step(x), 13))
+fn snr_ghost_gate(x) = (1 - is_b2(x)) * (eq(sw_step(x), 7) + eq(sw_step(x), 10))
+                     +      is_b2(x)  * (eq(sw_step(x), 3) + eq(sw_step(x), 7))
+fn snr(x) = 0.90 * snr_dbl_gate(x)   * snr_voice(sw_phase(x))
+          + 0.32 * snr_ghost_gate(x) * snr_voice(sw_phase(x))
+
+# open hat
+fn ohat_gate(x) = eq(fmod(step(x, BPM, 8), 2), 1)
+fn ohat(x) = ohat_gate(x) * noise(x * 51217) * decay(div_phase(x, BPM, 8), 24) * accent(x)
+
+# closed hats
+fn chat(x) = noise(x * 78233) * decay(sw_phase(x), 165) * (1 - 0.5 * sw_off(x)) * accent(x)
+
+# shaker
+fn shaker(x) = noise(x * 33119) * decay(sw_phase(x), 95) * (0.45 + 0.55 * sw_off(x)) * accent(x)
+
+# rim
+fn rim_gate(x) = eq(sw_step(x), 3) + eq(sw_step(x), 6) + eq(sw_step(x), 11) + eq(sw_step(x), 14)
+fn rim(x) = rim_gate(x) * (sin(TAU * 1650 * sw_phase(x)) + 0.5 * noise(x * 9001)) * decay(sw_phase(x), 70)
+
+# hat stutter into the loop
+fn hat_stut(x) = is_b2(x) * eq(sw_step(x), 15)
+               * noise(x * 13337) * decay(div_phase(x, BPM, 32), 240)
+
+# sidechain
+fn pump(x) = 0.6 * k_hit(x) * decay(div_phase(x, BPM, 8), 7)
+fn sc(x)   = 1 - pump(x)
+
+# mix
+fn perc(x) =
+      0.52 * clap(x)
+    + 0.50 * snr(x)
+    + 0.30 * ohat(x)
+    + 0.16 * chat(x)
+    + 0.13 * shaker(x)
+    + 0.22 * rim(x)
+    + 0.16 * hat_stut(x)
+
+f(x) = softclip(
+      0.95 * kick(x)
+    + perc(x) * sc(x)
+  , 1.08) * MASTER

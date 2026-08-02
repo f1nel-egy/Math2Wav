@@ -5,6 +5,7 @@ OBJS_DIR_REALPATH=$(BUILD_DIR_REALPATH)/objs
 SRC_DIR=./
 SRC_DIR_REALPATH = $(shell realpath $(SRC_DIR))
 LIBS_DIR=$(SRC_DIR)/libs
+THIRDPARTY_DIR=$(SRC_DIR)/thirdparty
 
 ARCH_BITS=64
 
@@ -14,13 +15,14 @@ AS=nasm
 AS_GNU=as
 LD=g++
 
-CFLAGS=-m$(ARCH_BITS) -fstack-protector -fPIC -I$(SRC_DIR_REALPATH) -I$(LIBS_DIR) -O3
+CFLAGS=-m$(ARCH_BITS) -fstack-protector -fPIC -I$(SRC_DIR_REALPATH) -I$(LIBS_DIR) -I$(THIRDPARTY_DIR) -O3
 CXXFLAGS=$(CFLAGS)
 ASFLAGS=-f elf$(ARCH_BITS)
-LDFLAGS=$(CFLAGS) -lm -lc -lunwind -unwind=libunwind -pie -fuse-ld=lld -Wl,-O3,--sort-common,--as-needed,-z,relro,-z,now
+LDFLAGS=$(CFLAGS) -lm -lc -pie -fuse-ld=lld -Wl,-O3,--sort-common,--as-needed,-z,relro,-z,now
 
 SOURCE_SUBDIRS = \
-	$(LIBS_DIR)
+	$(LIBS_DIR) \
+	$(THIRDPARTY_DIR)
 
 SUBDIRS := $(SOURCE_SUBDIRS)
 
